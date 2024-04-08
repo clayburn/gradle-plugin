@@ -9,6 +9,8 @@ import hudson.model.PasswordParameterValue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.plugins.gradle.DevelocityLogger;
+import hudson.plugins.gradle.injection.token.DevelocityAccessKey;
+import hudson.plugins.gradle.injection.token.ShortLivedTokenClient;
 import hudson.util.Secret;
 
 import javax.annotation.Nonnull;
@@ -23,15 +25,28 @@ import java.util.stream.Stream;
 @Extension
 public class BuildScanEnvironmentContributor extends EnvironmentContributor {
 
+    private final ShortLivedTokenClient tokenClient;
+
+    public BuildScanEnvironmentContributor() {
+        this.tokenClient = new ShortLivedTokenClient();
+    }
+
     @Override
     public void buildEnvironmentFor(@Nonnull Run run, @Nonnull EnvVars envs, @Nonnull TaskListener listener) {
-        Secret secretKey = InjectionConfig.get().getAccessKey();
+        final Secret secretKey = InjectionConfig.get().getAccessKey();
         Secret secretPassword = InjectionConfig.get().getGradlePluginRepositoryPassword();
         if ((secretKey == null && secretPassword == null) || alreadyExecuted(run)) {
             return;
         }
 
-        run.addAction(DevelocityParametersAction.of(new DevelocityLogger(listener), secretKey, secretPassword));
+        Secret shortLivedToken = null;
+        if (secretKey != null) {
+            shortLivedToken = tokenClient.get(InjectionConfig.get().getServer(), DevelocityAccessKey.parse(secretKey.getPlainText()))
+                .map(k -> Secret.fromString(k.getRawAccessKey()))
+                .orElse(null);
+        }
+
+        run.addAction(DevelocityParametersAction.of(new DevelocityLogger(listener), shortLivedToken, secretPassword));
     }
 
     private static boolean alreadyExecuted(@Nonnull Run run) {

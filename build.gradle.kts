@@ -121,6 +121,8 @@ dependencies {
 
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
 
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     add(includedLibs.name, "com.gradle:develocity-maven-extension:${develocityMavenExtensionVersion}")
     add(includedLibs.name, "com.gradle:common-custom-user-data-maven-extension:${commonCustomUserDataMavenExtensionVersion}")
     add(includedLibs.name, project(path = ":configuration-maven-extension", configuration = "mvnExtension"))
